@@ -11,7 +11,7 @@ public static class Program
     {
         DbConfig.InitDb();
         
-        UserInput.GetUserInput();
+        UserInputController.GetUserInput();
     }
     
     

@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices.JavaScript;
 using CodingTracker.Config;
@@ -11,23 +12,20 @@ namespace CodingTracker;
 public class CodingSessionController
 {
     // CRUD Create Read Update Delete
-
-
-    #region CRUD
-    
+    #region CREATE
     public static void Insert()
     {
         Console.Clear();
 
-        string date = UserInput.GetDateInput();
-        string from = UserInput.GetTimeInput("StartTime");
-        string to = UserInput.GetTimeInput("EndTime");
+        string date = UserInputController.GetDateInput();
+        string from = UserInputController.GetTimeInput("StartTime");
+        string to = UserInputController.GetTimeInput("EndTime");
 
         while (DateTime.Compare(DateTime.ParseExact(from, "HH:mm", new CultureInfo("de-DE")), DateTime.ParseExact(to, "HH:mm", new CultureInfo("de-DE"))) > 0)
         {
             Console.WriteLine("\n\n'EndTime' darf nicht vor 'StartTime' liegen.");
-            from = UserInput.GetTimeInput("StartTime");
-            to = UserInput.GetTimeInput("EndTime");
+            from = UserInputController.GetTimeInput("StartTime");
+            to = UserInputController.GetTimeInput("EndTime");
         }
         
         string duration = CalculateDuration(from, to);
@@ -45,6 +43,26 @@ public class CodingSessionController
         Console.WriteLine("\n CodingSession successfully added.");
     }
 
+    public static void Insert(string timeFrom, string timeTo)
+    {
+        string date = DateTime.Now.ToString("dd-MM-yy");
+        string duration = CalculateDuration(timeFrom, timeTo);
+
+        using (var connection = new SqliteConnection(DbConfig.ConnectionString))
+        {
+            connection.Open();
+            var tableCmd = connection.CreateCommand();
+
+            tableCmd.CommandText = $"INSERT INTO coding_session(Date, StartTime, EndTime, Duration) " +
+                                   $"VALUES('{date}', '{timeFrom}', '{timeTo}', '{duration}') ";
+            tableCmd.ExecuteNonQuery();
+            connection.Close();
+        }
+        Console.WriteLine("\n CodingSession successfully added.");
+    }
+    #endregion CREATE
+
+    #region READ
     public static void GetAllRecords()
     {
         Console.Clear();
@@ -66,11 +84,10 @@ public class CodingSessionController
                         new CodingSession
                         {
                             Id = reader.GetInt32(0),
-                            Date = DateTime.ParseExact(reader.GetString(1), "dd-MM-yy", new CultureInfo("de-DE")),
-                            StartTime = DateTime.ParseExact(reader.GetString(2), "HH:mm", new CultureInfo("de-DE")),
-                            EndTime   = DateTime.ParseExact(reader.GetString(3), "HH:mm", new CultureInfo("de-DE")),
-                            // Duration  = DateTime.ParseExact(reader.GetString(3), "dd-MM-yy HH:mm", new CultureInfo("de-DE"))
-                            Duration  = DateTime.ParseExact(reader.GetString(4), "HH:mm:ss", null, DateTimeStyles.None)
+                            Date = DateOnly.ParseExact(reader.GetString(1), "dd-MM-yy", new CultureInfo("de-DE")),
+                            StartTime = TimeOnly.ParseExact(reader.GetString(2), "HH:mm", new CultureInfo("de-DE")),
+                            EndTime   = TimeOnly.ParseExact(reader.GetString(3), "HH:mm", new CultureInfo("de-DE")),
+                            Duration  = TimeOnly.ParseExact(reader.GetString(4), "HH:mm", new CultureInfo("de-DE"))
                         }
                     );
                 }
@@ -80,25 +97,22 @@ public class CodingSessionController
             
             connection.Close();
             
-            // foreach (var cs in codingSessions)
-            // {
-            //     Console.WriteLine($"{cs.Id} | {cs.StartTime.ToString("dd-MMM yyyy - HH:mm")} | {cs.EndTime.ToString("dd-MMM yyyy - HH:mm")} | {cs.Duration.ToString("HH:mm")} ");
-            // }
-            
             ConsoleTableBuilder
                 .From(codingSessions)
                 .WithTitle("CODING-SESSIONS", ConsoleColor.DarkCyan)
                 .WithFormat(ConsoleTableBuilderFormat.Alternative)
-                .ExportAndWriteLine();
+                .ExportAndWriteLine(TableAligntment.Center);
         }
     }
+    #endregion READ
 
+    #region UPDATE
     public static void Update()
     {
         Console.Clear();
         GetAllRecords();
 
-        var codingSessionId = UserInput.GetNumberInput("\n\nPlease type Id of the 'CodingSession' you would like to update. \nType '0' to get back to main menu.\n\n");
+        var codingSessionId = UserInputController.GetNumberInput("\n\nPlease type Id of the 'CodingSession' you would like to update. \nType '0' to get back to main menu.\n\n");
 
         using (var connection = new SqliteConnection(DbConfig.ConnectionString))
         {
@@ -114,15 +128,15 @@ public class CodingSessionController
                 Update();
             }
 
-            string date = UserInput.GetDateInput();
-            string from = UserInput.GetTimeInput("StartTime");
-            string to   = UserInput.GetTimeInput("EndTime");
+            string date = UserInputController.GetDateInput();
+            string from = UserInputController.GetTimeInput("StartTime");
+            string to   = UserInputController.GetTimeInput("EndTime");
 
             while (DateTime.Compare(DateTime.ParseExact(from, "HH:mm", new CultureInfo("de-DE")), DateTime.ParseExact(to, "HH:mm", new CultureInfo("de-DE"))) > 0)
             {
                 Console.WriteLine("'EndTime' darf nicht vor 'StartTime' liegen.");
-                from = UserInput.GetTimeInput("StartTime");
-                to   = UserInput.GetTimeInput("EndTime");
+                from = UserInputController.GetTimeInput("StartTime");
+                to   = UserInputController.GetTimeInput("EndTime");
             }
 
             string duration = CalculateDuration(from, to);
@@ -137,13 +151,15 @@ public class CodingSessionController
             connection.Close();
         }
     }
+    #endregion UPDATE
 
+    #region DELETE
     public static void Delete()
     {
         Console.Clear();
         GetAllRecords();
 
-        int codingSessionId = UserInput.GetNumberInput("\n\nPlease type Id of the 'codingSession' you would like to update. \nType '0' to get back to main menu.\n\n");
+        int codingSessionId = UserInputController.GetNumberInput("\n\nPlease type Id of the 'codingSession' you would like to update. \nType '0' to get back to main menu.\n\n");
 
         using (var connection = new SqliteConnection(DbConfig.ConnectionString))
         {
@@ -163,32 +179,20 @@ public class CodingSessionController
         }
     }
     
-    #endregion
-
+    #endregion DELETE
     
-    #region Methods
+    #region METHODS
     private static string CalculateDuration(string startTime, string endTime)
     {
-        // return (DateTime.ParseExact(endTime, "HH:mm", new CultureInfo("de-DE")) -<
-        //         DateTime.ParseExact(startTime, "HH:mm", new CultureInfo("de-DE")))
-        //         .ToString("HH:mm");
-        
         TimeOnly from = TimeOnly.ParseExact(startTime, "HH:mm");
         TimeOnly to = TimeOnly.ParseExact(endTime, "HH:mm");
-
         TimeSpan result = to - from;
         
-        // DateTime from;
-        // DateTime to;
-        // DateTime.TryParseExact(startTime, "HH:mm", new CultureInfo("de-DE"), DateTimeStyles.None, out from);
-        // DateTime.TryParseExact(endTime, "HH:mm", new CultureInfo("de-DE"), DateTimeStyles.None, out to);
-        //
-        // string result = (to - from).ToString("HH:mm");
-        
-        return result.ToString();
+        return result.ToString()[..5];
     }
     
     #endregion
-    
+
+
     
 }

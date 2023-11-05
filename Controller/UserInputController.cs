@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace CodingTracker;
 
-public class UserInput
+public class UserInputController
 {
     
     public static void GetUserInput()
@@ -18,6 +18,7 @@ public class UserInput
             Console.WriteLine("Type '2' to Insert record.");
             Console.WriteLine("Type '3' to Update record.");
             Console.WriteLine("Type '4' to Delete record.");
+            Console.WriteLine("Type '5' to use StopWatch.");
             Console.WriteLine("---------------------------------------\n");
             Console.Write("> ");
 
@@ -42,8 +43,11 @@ public class UserInput
                 case "4":
                     CodingSessionController.Delete();
                     break;
+                case "5":
+                    StopWatchController.Timer();
+                    break;
                 default:
-                    Console.WriteLine("\nInvalid Command. Please type a number from 0 to 4.\n");
+                    Console.WriteLine("\nInvalid Command. Please type a number from 0 to 5.\n");
                     break;
             }
         }
